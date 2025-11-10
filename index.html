@@ -1,9 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>B2B Portal Demo</title>
+  <title>B2B Portal — Join & Staff Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
@@ -13,71 +13,169 @@
   <div id="root"></div>
 
   <script type="text/babel">
+  // ======== CONFIG — UPDATE ONLY THESE TWO IF NEEDED =========
+  const API = {
+    base: "https://script.google.com/macros/s/AKfycbwh-KZj_M_lEb0RJ29KlcQRQ_ugTGUGAOpYpEZvFQhaPvQ2AtHWrDa9JlzHneg0XV5_/exec",
+    key:  "B2B_CYCLE",
+  };
 
-// ================= API ==================
-const API = {
-  base: "https://script.google.com/macros/s/AKfycbwh-KZj_M_lEb0RJ29KlcQRQ_ugTGUGAOpYpEZvFQhaPvQ2AtHWrDa9JlzHneg0XV5_/exec",
-  key:  "B2B_CYCLE",
-};
-
-async function apiGet(entity) {
-  const url = `${API.base}?entity=${entity}&key=${API.key}`;
-  const res = await fetch(url);
-  return res.json();
-}
-
-async function apiPost(entity, rowObj) {
-  const url = `${API.base}?entity=${entity}&key=${API.key}`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(rowObj),
-  });
-  return res.json();
-}
-
-// ================= MAIN APP ==================
-function App(){
-  const [mode,setMode]=React.useState("public");
-  return (
-    <div>
-      <header class="p-4 bg-white border-b flex justify-between">
-        <h1 class="font-bold">B2B Portal Demo</h1>
-        <div class="flex gap-2">
-          <button class="px-3 py-1 border rounded" onClick={()=>setMode("public")}>Public</button>
-          <button class="px-3 py-1 border rounded" onClick={()=>setMode("member")}>Member</button>
-          <button class="px-3 py-1 border rounded" onClick={()=>setMode("staff")}>Staff</button>
-        </div>
-      </header>
-
-      {mode==="public" && <PublicArea />}
-      {mode==="member" && <MemberArea />}
-      {mode==="staff" && <StaffArea />}
-    </div>
-  );
-}
-
-// Simple placeholders
-function PublicArea(){ return <div class="p-6">Public area works ✅</div>; }
-function MemberArea(){ return <div class="p-6">Member preview ✅</div>; }
-
-// Staff loads sheets
-function StaffArea(){
-  const [members,setMembers]=React.useState([]);
-  async function load(){ 
-    const m = await apiGet("members");
-    setMembers(m.data||[]);
+  // ======== HELPERS (GET/POST) =========
+  async function apiGet(entity){
+    const res = await fetch(`${API.base}?entity=${entity}&key=${API.key}`);
+    return res.json();
   }
-  return (
-    <div class="p-6">
-      <button class="px-3 py-2 bg-black text-white rounded" onClick={load}>Load Members</button>
-      <pre class="mt-4 bg-white p-3 border rounded">{JSON.stringify(members,null,2)}</pre>
-    </div>
-  );
-}
+  async function apiPost(entity, row){
+    const res = await fetch(`${API.base}?entity=${entity}&key=${API.key}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(row),
+    });
+    return res.json();
+  }
 
-ReactDOM.render(<App/>, document.getElementById('root'));
+  // ======== APP SHELL =========
+  function App(){
+    const [mode, setMode] = React.useState("public"); // public | member | staff
+    return (
+      <div>
+        <header className="p-4 bg-white border-b flex justify-between items-center">
+          <h1 className="font-bold">B2B Portal</h1>
+          <div className="flex gap-2">
+            <button className="px-3 py-1 border rounded" onClick={()=>setMode("public")}>Public</button>
+            <button className="px-3 py-1 border rounded" onClick={()=>setMode("member")}>Member</button>
+            <button className="px-3 py-1 border rounded" onClick={()=>setMode("staff")}>Staff</button>
+          </div>
+        </header>
 
+        {mode === "public" && <PublicArea />}
+        {mode === "member" && <MemberArea />}
+        {mode === "staff" && <StaffArea />}
+      </div>
+    );
+  }
+
+  // ======== PUBLIC (JOIN PROGRAM → Members POST) =========
+  function PublicArea(){
+    const [fullName, setFullName] = React.useState("");
+    const [email, setEmail]       = React.useState("");
+    const [phone, setPhone]       = React.useState("");
+    const [business, setBusiness] = React.useState("");
+    const [state, setState]       = React.useState("MS");
+    const [msg, setMsg]           = React.useState("");
+
+    async function submit(e){
+      e.preventDefault();
+      setMsg("Submitting…");
+
+      // Map to your Members headers:
+      // id | business | owner | email | phone | state | status | readiness
+      const row = {
+        id: `M-${Date.now()}`,
+        business,
+        owner: fullName,
+        email,
+        phone,
+        state,
+        status: "INTAKE",
+        readiness: 0,
+        created_at: new Date().toISOString()
+      };
+
+      try{
+        const res = await apiPost("members", row);
+        if(res?.ok){
+          setMsg("Submitted! We’ll follow up by email.");
+          // clear form
+          setFullName(""); setEmail(""); setPhone(""); setBusiness("");
+          setState("MS");
+        }else{
+          setMsg(res?.error || "There was a problem. Check console.");
+          console.error(res);
+        }
+      }catch(err){
+        console.error(err);
+        setMsg("Network/API error. See console.");
+      }
+    }
+
+    return (
+      <main className="p-6">
+        <div className="max-w-3xl mx-auto rounded-2xl border bg-white p-6">
+          <h2 className="text-2xl font-bold">Join the Program</h2>
+          <p className="text-sm text-neutral-600 mt-1">
+            Tell us about your business; we’ll review and follow up with next steps.
+          </p>
+
+          <form onSubmit={submit} className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <label className="text-sm font-medium">Full name</label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2"
+                     value={fullName} onChange={e=>setFullName(e.target.value)} placeholder="First Last"/>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Business name</label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2"
+                     value={business} onChange={e=>setBusiness(e.target.value)} placeholder="Company LLC"/>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Email</label>
+              <input type="email" className="mt-1 w-full rounded-xl border px-3 py-2"
+                     value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com"/>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">Phone</label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2"
+                     value={phone} onChange={e=>setPhone(e.target.value)} placeholder="(###) ###-####"/>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium">State</label>
+              <input className="mt-1 w-full rounded-xl border px-3 py-2"
+                     value={state} onChange={e=>setState(e.target.value)} placeholder="MS"/>
+            </div>
+
+            <div className="md:col-span-2 flex items-center justify-between">
+              <span className="text-sm text-neutral-600">{msg}</span>
+              <button className="px-5 py-2.5 rounded-xl bg-neutral-900 text-white font-semibold">Submit</button>
+            </div>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  // ======== MEMBER PLACEHOLDER =========
+  function MemberArea(){
+    return <div className="p-6">Member preview ✅</div>;
+  }
+
+  // ======== STAFF (prove GET works) =========
+  function StaffArea(){
+    const [members, setMembers] = React.useState([]);
+    const [status, setStatus]   = React.useState("");
+
+    async function load(){
+      setStatus("Loading…");
+      const res = await apiGet("members");
+      setMembers(res?.data || []);
+      setStatus(res?.ok ? "Loaded." : (res?.error || "Error"));
+    }
+
+    return (
+      <div className="p-6">
+        <button className="px-3 py-2 bg-black text-white rounded" onClick={load}>
+          Load Members
+        </button>
+        <span className="ml-3 text-sm text-neutral-600">{status}</span>
+        <pre className="mt-4 bg-white p-3 border rounded overflow-auto">{JSON.stringify(members, null, 2)}</pre>
+      </div>
+    );
+  }
+
+  ReactDOM.render(<App/>, document.getElementById("root"));
   </script>
 </body>
 </html>
