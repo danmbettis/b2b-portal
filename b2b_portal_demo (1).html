@@ -1,0 +1,69 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>B2B Portal Demo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-neutral-50">
+  <div id="root"></div>
+
+  <script type="text/babel">
+
+// ================= API ==================
+const API = {
+  base: "https://script.google.com/macros/s/AKfycbwh-KZj_M_lEb0RJ29KlcQRQ_ugTGUGAOpYpEZvFQhaPvQ2AtHWrDa9JlzHneg0XV5_/exec",
+  key:  "B2B_CYCLE",
+};
+async function apiGet(entity){ return (await fetch(`${API.base}?entity=${entity}&key=${API.key}`)).json(); }
+async function apiPost(entity,row){ return (await fetch(`${API.base}?entity=${entity}&key=${API.key}`,{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(row)})).json(); }
+
+// ================= MAIN APP ==================
+function App(){
+  const [mode,setMode]=React.useState("public");
+  return (
+    <div>
+      <header class="p-4 bg-white border-b flex justify-between">
+        <h1 class="font-bold">B2B Portal Demo</h1>
+        <div class="flex gap-2">
+          <button class="px-3 py-1 border rounded" onClick={()=>setMode("public")}>Public</button>
+          <button class="px-3 py-1 border rounded" onClick={()=>setMode("member")}>Member</button>
+          <button class="px-3 py-1 border rounded" onClick={()=>setMode("staff")}>Staff</button>
+        </div>
+      </header>
+
+      {mode==="public" && <PublicArea />}
+      {mode==="member" && <MemberArea />}
+      {mode==="staff" && <StaffArea />}
+    </div>
+  );
+}
+
+// Simple placeholders
+function PublicArea(){ return <div class="p-6">Public area works ✅</div>; }
+function MemberArea(){ return <div class="p-6">Member preview ✅</div>; }
+
+// Staff loads sheets
+function StaffArea(){
+  const [members,setMembers]=React.useState([]);
+  async function load(){ 
+    const m = await apiGet("members");
+    setMembers(m.data||[]);
+  }
+  return (
+    <div class="p-6">
+      <button class="px-3 py-2 bg-black text-white rounded" onClick={load}>Load Members</button>
+      <pre class="mt-4 bg-white p-3 border rounded">{JSON.stringify(members,null,2)}</pre>
+    </div>
+  );
+}
+
+ReactDOM.render(<App/>, document.getElementById('root'));
+
+  </script>
+</body>
+</html>
