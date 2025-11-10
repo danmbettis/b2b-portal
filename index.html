@@ -19,8 +19,22 @@ const API = {
   base: "https://script.google.com/macros/s/AKfycbwh-KZj_M_lEb0RJ29KlcQRQ_ugTGUGAOpYpEZvFQhaPvQ2AtHWrDa9JlzHneg0XV5_/exec",
   key:  "B2B_CYCLE",
 };
-async function apiGet(entity){ return (await fetch(`${API.base}?entity=${entity}&key=${API.key}`)).json(); }
-async function apiPost(entity,row){ return (await fetch(`${API.base}?entity=${entity}&key=${API.key}`,{method:"POST",headers:{'Content-Type':'application/json'},body:JSON.stringify(row)})).json(); }
+
+async function apiGet(entity) {
+  const url = `${API.base}?entity=${entity}&key=${API.key}`;
+  const res = await fetch(url);
+  return res.json();
+}
+
+async function apiPost(entity, rowObj) {
+  const url = `${API.base}?entity=${entity}&key=${API.key}`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(rowObj),
+  });
+  return res.json();
+}
 
 // ================= MAIN APP ==================
 function App(){
